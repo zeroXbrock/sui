@@ -255,47 +255,19 @@ pub async fn setup_db_state(
             "Beginning DB live object state verification. This may take a while, \
             and currently does not provide progress updates..."
         );
-        // NB: this is technically incorrect as below we get the protocol config
-        // from the system state object, which at this point contains protocol version
-        // information for the next epoch (epoch the validator was preparing to
-        // reconfigure into at the time the root state hash was computed). This means
-        // that the protocol config is for the next epoch. The protocol config is relevant
-        // for us to determine if tombstones are included in the live object set digest.
-        // Incorrectly considering tombstones may cause the verification to fail. The correct
-        // thing to do would be to get the previous epoch's system state object, but this is
-        // not in the live object set. For now, we optimistically assume this protocol config
-        // parameter is not affected by the off-by-one. If verification fails, we re-fetch the
-        // protocol config for the previous protocol version. Iff the tombstone parameter value
-        // differs between the two protocol configs, we re-verify using this value.
-        let protocol_config = ProtocolConfig::get_for_version(protocol_version, chain);
-        let include_tombstones = !protocol_config.simplified_unwrap_then_delete();
+        let simplified_unwrap_then_delete = match (chain, epoch) {
+            (Chain::Mainnet, ep) if ep >= 87 => true,
+            (Chain::Mainnet, ep) if ep < 87 => false,
+            (Chain::Testnet, ep) if ep >= 50 => true,
+            (Chain::Testnet, ep) if ep < 50 => false,
+            _ => panic!("Unsupported chain"),
+        };
+        let include_tombstones = !simplified_unwrap_then_delete;
         let iter = perpetual_db.iter_live_object_set(include_tombstones);
         let local_digest =
             ECMHLiveObjectSetDigest::from(accumulate_live_object_iter(Box::new(iter)).digest());
-        let verification_succeeded = if root_digest == local_digest {
-            true
-        } else {
-            let prev_protocol_config = ProtocolConfig::get_for_version(protocol_version - 1, chain);
-            let prev_include_tombstones = !prev_protocol_config.simplified_unwrap_then_delete();
-
-            // check for protocol config edge case
-            if include_tombstones == prev_include_tombstones {
-                false
-            } else {
-                info!(
-                    "Retrying verification for protocol version {:?} with include_tombstones = {}",
-                    protocol_version - 1,
-                    prev_include_tombstones
-                );
-                let iter = perpetual_db.iter_live_object_set(prev_include_tombstones);
-                let local_digest = ECMHLiveObjectSetDigest::from(
-                    accumulate_live_object_iter(Box::new(iter)).digest(),
-                );
-                root_digest == local_digest
-            }
-        };
-        assert!(
-            verification_succeeded,
+        assert_eq!(
+            root_digest, local_digest,
             "End of epoch {} root state digest {} does not match \
                 local root state hash {} after restoring db from formal snapshot",
             epoch, root_digest.digest, local_digest.digest,
