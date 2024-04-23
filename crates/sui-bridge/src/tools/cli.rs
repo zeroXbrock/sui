@@ -193,13 +193,11 @@ async fn main() -> anyhow::Result<()> {
             println!("Starting bridge committee registration for Sui validator: {address}, with bridge public key: {}", ecdsa_keypair.public);
 
             let sui_client = SuiClientBuilder::default()
-                .build(&bridge_config.sui.sui_rpc_url)
+                .build(&bridge_config.sui_rpc_url)
                 .await?;
 
-            let bridge_client = SuiClient::new(&bridge_config.sui.sui_rpc_url).await?;
-            let bridge = bridge_client
-                .get_mutable_bridge_object_arg_must_succeed()
-                .await;
+            let bridge_client = SuiClient::new(&bridge_config.sui_rpc_url).await?;
+            let bridge = bridge_client.get_mutable_bridge_object_arg().await.unwrap();
 
             let coins = sui_client
                 .coin_read_api()
