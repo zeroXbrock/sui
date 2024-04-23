@@ -90,12 +90,15 @@ where
         interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
         loop {
             interval.tick().await;
-            let Ok(Ok(events)) = retry_with_max_elapsed_time!(
+            let events = match retry_with_max_elapsed_time!(
                 sui_client.query_events_by_module(BRIDGE_PACKAGE_ID, module.clone(), cursor),
                 Duration::from_secs(10)
-            ) else {
-                tracing::error!("Failed to query events from sui client after retry");
-                continue;
+            ) {
+                Ok(Ok(events)) => events,
+                Err(e) | Ok(Err(e)) => {
+                    tracing::error!("Failed to query events from sui client after retry: {e:?}");
+                    continue;
+                }
             };
 
             let len = events.data.len();
