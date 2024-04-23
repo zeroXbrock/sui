@@ -31,7 +31,6 @@ use sui_bridge::utils::{
 use sui_config::{Config, NodeConfig};
 use sui_json_rpc_types::SuiTransactionBlockResponseOptions;
 use sui_json_rpc_types::{ObjectChange, SuiTransactionBlockEffectsAPI};
-use sui_move_build::BuildConfig;
 use sui_sdk::{SuiClient as SuiSdkClient, SuiClientBuilder};
 use sui_types::base_types::{ObjectRef, SuiAddress};
 use sui_types::bridge::{BridgeChainId, BRIDGE_MODULE_NAME};
@@ -280,7 +279,7 @@ async fn publish_and_register_token() {
         .await
         .unwrap();
 
-    let compiled_package = BuildConfig::new_for_testing()
+    let compiled_package = sui_move_build::BuildConfig::new_for_testing()
         .build(PathBuf::from("/Users/patrick/sui/bridge/move/tokens/btc"))
         .unwrap();
     let all_module_bytes = compiled_package.get_package_bytes(false);
