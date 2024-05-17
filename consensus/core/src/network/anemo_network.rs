@@ -206,6 +206,15 @@ impl NetworkClient for AnemoClient {
         let response = response.into_body();
         Ok((response.commits, response.certifier_blocks))
     }
+
+    async fn fetch_latest_blocks(
+        &self,
+        _peer: AuthorityIndex,
+        _authorities: Vec<AuthorityIndex>,
+        _timeout: Duration,
+    ) -> ConsensusResult<Vec<Vec<Bytes>>> {
+        unimplemented!("Unimplemented")
+    }
 }
 
 /// Proxies Anemo requests to NetworkService with actual handler implementation.
@@ -342,6 +351,13 @@ impl<S: NetworkService> ConsensusRpc for AnemoServiceProxy<S> {
             commits,
             certifier_blocks,
         }))
+    }
+
+    async fn fetch_latest_blocks(
+        &self,
+        _request: anemo::Request<FetchLatestBlocksRequest>,
+    ) -> Result<anemo::Response<FetchLatestBlocksResponse>, anemo::rpc::Status> {
+        unimplemented!("Unimplemented");
     }
 }
 
@@ -610,6 +626,17 @@ pub(crate) struct FetchCommitsResponse {
     commits: Vec<Bytes>,
     // Serialized SignedBlock that certify the last commit from above.
     certifier_blocks: Vec<Bytes>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct FetchLatestBlocksRequest {
+    authorities: Vec<AuthorityIndex>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct FetchLatestBlocksResponse {
+    // Serialized SignedBlocks.
+    blocks: Vec<Vec<Bytes>>,
 }
 
 #[derive(Clone)]

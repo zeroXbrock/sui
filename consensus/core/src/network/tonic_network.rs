@@ -238,6 +238,15 @@ impl NetworkClient for TonicClient {
         let response = response.into_inner();
         Ok((response.commits, response.certifier_blocks))
     }
+
+    async fn fetch_latest_blocks(
+        &self,
+        _peer: AuthorityIndex,
+        _authorities: Vec<AuthorityIndex>,
+        _timeout: Duration,
+    ) -> ConsensusResult<Vec<Vec<Bytes>>> {
+        unimplemented!("Unimplemented")
+    }
 }
 
 /// Manages a pool of connections to peers to avoid constantly reconnecting,
@@ -467,6 +476,13 @@ impl<S: NetworkService> ConsensusService for TonicServiceProxy<S> {
             commits,
             certifier_blocks,
         }))
+    }
+
+    async fn fetch_latest_blocks(
+        &self,
+        _request: Request<FetchLatestBlocksRequest>,
+    ) -> Result<Response<FetchLatestBlocksResponse>, tonic::Status> {
+        unimplemented!("not implemented yet");
     }
 }
 
@@ -883,6 +899,19 @@ pub(crate) struct FetchCommitsResponse {
     // Serialized SignedBlock that certify the last commit from above.
     #[prost(bytes = "bytes", repeated, tag = "2")]
     certifier_blocks: Vec<Bytes>,
+}
+
+#[derive(Clone, prost::Message)]
+pub(crate) struct FetchLatestBlocksRequest {
+    #[prost(uint32, repeated, tag = "1")]
+    authorities: Vec<u32>,
+}
+
+#[derive(Clone, prost::Message)]
+pub(crate) struct FetchLatestBlocksResponse {
+    // The response of the requested blocks as Serialized SignedBlock.
+    #[prost(bytes = "bytes", repeated, tag = "1")]
+    blocks: Vec<Bytes>,
 }
 
 fn chunk_blocks(blocks: Vec<Bytes>, chunk_limit: usize) -> Vec<Vec<Bytes>> {

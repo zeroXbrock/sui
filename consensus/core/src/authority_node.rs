@@ -450,6 +450,15 @@ mod tests {
         ) -> ConsensusResult<(Vec<Bytes>, Vec<Bytes>)> {
             unimplemented!("Unimplemented")
         }
+
+        async fn fetch_latest_blocks(
+            &self,
+            _peer: AuthorityIndex,
+            _authorities: Vec<AuthorityIndex>,
+            _timeout: Duration,
+        ) -> ConsensusResult<Vec<Vec<Bytes>>> {
+            unimplemented!("Unimplemented")
+        }
     }
 
     #[rstest]

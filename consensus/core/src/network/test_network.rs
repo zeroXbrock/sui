@@ -83,4 +83,12 @@ impl NetworkService for Mutex<TestService> {
         self.lock().handle_fetch_commits.push((peer, start, end));
         Ok((vec![], vec![]))
     }
+
+    async fn handle_fetch_latest_blocks(
+        &self,
+        _peer: AuthorityIndex,
+        _authorities: Vec<AuthorityIndex>,
+    ) -> ConsensusResult<Vec<Vec<Bytes>>> {
+        unimplemented!("Unimplemented")
+    }
 }

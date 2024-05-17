@@ -346,6 +346,14 @@ impl<C: CoreThreadDispatcher> NetworkService for AuthorityService<C> {
             .collect();
         Ok((commits, certifier_blocks))
     }
+
+    async fn handle_fetch_latest_blocks(
+        &self,
+        _peer: AuthorityIndex,
+        _authorities: Vec<AuthorityIndex>,
+    ) -> ConsensusResult<Vec<Vec<Bytes>>> {
+        unimplemented!("Unimplemented");
+    }
 }
 
 /// Each broadcasted block stream wraps a broadcast receiver for blocks.
