@@ -19,6 +19,7 @@ consensus-config.workspace = true
 count-min-sketch.workspace = true
 dashmap.workspace = true
 diffy = { version = "0.3", default-features = false }
+domain.workspace = true
 either.workspace = true
 enum_dispatch.workspace = true
 eyre.workspace = true
