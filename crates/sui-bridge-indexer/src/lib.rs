@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 
 pub mod config;
 pub mod models;
-pub mod postgres_writer;
+pub mod postgres_manager;
 pub mod schema;
 pub mod worker;
 

@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::postgres_writer::{get_connection_pool, write, PgPool};
+use crate::postgres_manager::{get_connection_pool, write, PgPool};
 use crate::{BridgeDataSource, TokenTransfer, TokenTransferData, TokenTransferStatus};
 use anyhow::Result;
 use async_trait::async_trait;

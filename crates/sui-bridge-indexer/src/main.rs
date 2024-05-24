@@ -21,7 +21,8 @@ use sui_bridge::{
     eth_client::EthClient,
     eth_syncer::EthSyncer,
 };
-use sui_bridge_indexer::postgres_writer::get_connection_pool;
+use sui_bridge_indexer::postgres_manager::get_connection_pool;
+use sui_bridge_indexer::postgres_manager::get_newest_token_transfer;
 use sui_bridge_indexer::{
     config::load_config, worker::process_eth_transaction, worker::BridgeWorker,
 };
@@ -101,14 +102,22 @@ async fn main() -> Result<()> {
         .await?,
     );
 
-    let contract_addresses = HashMap::from_iter(vec![(bridge_address, config.start_block)]);
+    //
+    let pg_pool = get_connection_pool(config.db_url.clone());
+
+    let from_block = match get_newest_token_transfer(&pg_pool)? {
+        Some(transfer) => transfer.block_height as u64 + 1,
+        None => config.start_block,
+    };
+
+    println!("Starting from block: {}", from_block);
+
+    let contract_addresses = HashMap::from_iter(vec![(bridge_address, from_block)]);
 
     let (_task_handles, eth_events_rx, _) = EthSyncer::new(eth_client, contract_addresses)
         .run()
         .await
         .expect("Failed to start eth syncer");
-
-    let pg_pool = get_connection_pool(config.db_url.clone());
 
     let _task_handle = spawn_logged_monitored_task!(
         process_eth_transaction(eth_events_rx, provider.clone(), pg_pool),
