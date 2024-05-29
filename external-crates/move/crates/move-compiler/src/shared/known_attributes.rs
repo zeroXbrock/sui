@@ -27,6 +27,7 @@ pub enum KnownAttribute {
     External(ExternalAttribute),
     Syntax(SyntaxAttribute),
     Error(ErrorAttribute),
+    Deprecation(DeprecationAttribute),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -72,6 +73,9 @@ pub struct ExternalAttribute;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ErrorAttribute;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DeprecationAttribute;
+
 impl AttributePosition {
     const ALL: &'static [Self] = &[
         Self::AddressBlock,
@@ -99,6 +103,7 @@ impl KnownAttribute {
             ExternalAttribute::EXTERNAL => ExternalAttribute.into(),
             SyntaxAttribute::SYNTAX => SyntaxAttribute::Syntax.into(),
             ErrorAttribute::ERROR => ErrorAttribute.into(),
+            DeprecationAttribute::DEPRECATED => DeprecationAttribute.into(),
             _ => return None,
         })
     }
@@ -113,6 +118,7 @@ impl KnownAttribute {
             Self::External(a) => a.name(),
             Self::Syntax(a) => a.name(),
             Self::Error(a) => a.name(),
+            Self::Deprecation(a) => a.name(),
         }
     }
 
@@ -126,6 +132,7 @@ impl KnownAttribute {
             Self::External(a) => a.expected_positions(),
             Self::Syntax(a) => a.expected_positions(),
             Self::Error(a) => a.expected_positions(),
+            Self::Deprecation(a) => a.expected_positions(),
         }
     }
 }
@@ -321,6 +328,27 @@ impl ErrorAttribute {
     }
 }
 
+impl DeprecationAttribute {
+    pub const DEPRECATED: &'static str = "deprecated";
+
+    pub const fn name(&self) -> &str {
+        Self::DEPRECATED
+    }
+
+    pub fn expected_positions(&self) -> &'static BTreeSet<AttributePosition> {
+        static DEPRECATION_POSITIONS: Lazy<BTreeSet<AttributePosition>> = Lazy::new(|| {
+            BTreeSet::from([
+                AttributePosition::Constant,
+                AttributePosition::Module,
+                AttributePosition::Struct,
+                AttributePosition::Enum,
+                AttributePosition::Function,
+            ])
+        });
+        &DEPRECATION_POSITIONS
+    }
+}
+
 //**************************************************************************************************
 // Display
 //**************************************************************************************************
@@ -352,6 +380,7 @@ impl fmt::Display for KnownAttribute {
             Self::External(a) => a.fmt(f),
             Self::Syntax(a) => a.fmt(f),
             Self::Error(a) => a.fmt(f),
+            Self::Deprecation(a) => a.fmt(f),
         }
     }
 }
@@ -404,6 +433,12 @@ impl fmt::Display for ErrorAttribute {
     }
 }
 
+impl fmt::Display for DeprecationAttribute {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name())
+    }
+}
+
 //**************************************************************************************************
 // From
 //**************************************************************************************************
@@ -446,5 +481,10 @@ impl From<SyntaxAttribute> for KnownAttribute {
 impl From<ErrorAttribute> for KnownAttribute {
     fn from(a: ErrorAttribute) -> Self {
         Self::Error(a)
+    }
+}
+impl From<DeprecationAttribute> for KnownAttribute {
+    fn from(a: DeprecationAttribute) -> Self {
+        Self::Deprecation(a)
     }
 }
