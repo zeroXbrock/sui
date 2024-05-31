@@ -414,47 +414,15 @@ mod tests {
         let mut output_receivers = vec![];
         let mut authorities = vec![];
 
-        let make_authority = |index: AuthorityIndex| {
-            let committee = committee.clone();
-            let registry = Registry::new();
-
-            // Cache less blocks to exercise commit sync.
-            let parameters = Parameters {
-                db_path: Some(temp_dirs[index.value()].path().to_path_buf()),
-                dag_state_cached_rounds: 5,
-                commit_sync_parallel_fetches: 3,
-                commit_sync_batch_size: 3,
-                sync_last_proposed_block_timeout: Duration::from_millis(2_000),
-                ..Default::default()
-            };
-            let txn_verifier = NoopTransactionVerifier {};
-
-            let protocol_keypair = keypairs[index].1.clone();
-            let network_keypair = keypairs[index].0.clone();
-
-            let (sender, receiver) = unbounded_channel();
-            let commit_consumer = CommitConsumer::new(sender, 0, 0);
-
-            async move {
-                let authority = ConsensusAuthority::start(
-                    network_type,
-                    index,
-                    committee,
-                    parameters,
-                    ProtocolConfig::get_for_max_version_UNSAFE(),
-                    protocol_keypair,
-                    network_keypair,
-                    Arc::new(txn_verifier),
-                    commit_consumer,
-                    registry,
-                )
-                .await;
-                (authority, receiver)
-            }
-        };
-
         for (index, _authority_info) in committee.authorities() {
-            let (authority, receiver) = make_authority(index).await;
+            let (authority, receiver) = make_authority(
+                index,
+                &temp_dirs[index.value()],
+                committee.clone(),
+                keypairs.clone(),
+                network_type,
+            )
+            .await;
             output_receivers.push(receiver);
             authorities.push(authority);
         }
@@ -501,7 +469,14 @@ mod tests {
         sleep(Duration::from_secs(15)).await;
 
         // Restart authority 1 and let it run.
-        let (authority, receiver) = make_authority(index).await;
+        let (authority, receiver) = make_authority(
+            index,
+            &temp_dirs[index.value()],
+            committee.clone(),
+            keypairs.clone(),
+            network_type,
+        )
+        .await;
         output_receivers[index] = receiver;
         authorities.insert(index.value(), authority);
         sleep(Duration::from_secs(15)).await;
@@ -528,7 +503,7 @@ mod tests {
         for (index, _authority_info) in committee.authorities() {
             let (authority, receiver) = make_authority(
                 index,
-                TempDir::new().unwrap(),
+                &TempDir::new().unwrap(),
                 committee.clone(),
                 keypairs.clone(),
                 network_type,
@@ -583,7 +558,7 @@ mod tests {
         // to consensus but now will attempt to synchronize the last own block and recover from there.
         let (authority, receiver) = make_authority(
             index,
-            TempDir::new().unwrap(),
+            &TempDir::new().unwrap(),
             committee.clone(),
             keypairs,
             network_type,
@@ -626,7 +601,7 @@ mod tests {
         for (index, _authority_info) in committee.authorities() {
             let (authority, receiver) = make_authority(
                 index,
-                TempDir::new().unwrap(),
+                &TempDir::new().unwrap(),
                 committee.clone(),
                 keypairs.clone(),
                 network_type,
@@ -649,7 +624,7 @@ mod tests {
         let index = AuthorityIndex::new_for_test(0);
         let (_authority, _receiver) = make_authority(
             index,
-            TempDir::new().unwrap(),
+            &TempDir::new().unwrap(),
             committee,
             keypairs,
             network_type,
@@ -668,7 +643,7 @@ mod tests {
 
     async fn make_authority(
         index: AuthorityIndex,
-        db_dir: TempDir,
+        db_dir: &TempDir,
         committee: Committee,
         keypairs: Vec<(NetworkKeyPair, ProtocolKeyPair)>,
         network_type: ConsensusNetwork,
