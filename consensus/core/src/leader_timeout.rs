@@ -166,6 +166,10 @@ mod tests {
         async fn get_missing_blocks(&self) -> Result<BTreeSet<BlockRef>, CoreError> {
             todo!()
         }
+
+        async fn set_min_propose_round(&self, _round: Round) -> Result<(), CoreError> {
+            todo!()
+        }
     }
 
     #[tokio::test(flavor = "current_thread", start_paused = true)]

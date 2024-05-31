@@ -28,6 +28,10 @@ enum CoreThreadCommand {
     NewBlock(Round, oneshot::Sender<()>, bool),
     /// Request missing blocks that need to be synced.
     GetMissing(oneshot::Sender<BTreeSet<BlockRef>>),
+    /// Sets the minimum propose round for the proposer. This is primarily used when the node
+    /// is recovering and trying to figure out from the network its last proposed block/round and
+    /// set it accordingly to `[Core]`.
+    SetMinProposeRound(Round, oneshot::Sender<()>),
 }
 
 #[derive(Error, Debug)]
@@ -46,6 +50,8 @@ pub trait CoreThreadDispatcher: Sync + Send + 'static {
     async fn new_block(&self, round: Round, force: bool) -> Result<(), CoreError>;
 
     async fn get_missing_blocks(&self) -> Result<BTreeSet<BlockRef>, CoreError>;
+
+    async fn set_min_propose_round(&self, round: Round) -> Result<(), CoreError>;
 }
 
 pub(crate) struct CoreThreadHandle {
@@ -85,6 +91,10 @@ impl CoreThread {
                 }
                 CoreThreadCommand::GetMissing(sender) => {
                     sender.send(self.core.get_missing_blocks()).ok();
+                }
+                CoreThreadCommand::SetMinProposeRound(round, sender) => {
+                    self.core.set_min_propose_round(round);
+                    sender.send(()).ok();
                 }
             }
         }
@@ -171,6 +181,13 @@ impl CoreThreadDispatcher for ChannelCoreThreadDispatcher {
     async fn get_missing_blocks(&self) -> Result<BTreeSet<BlockRef>, CoreError> {
         let (sender, receiver) = oneshot::channel();
         self.send(CoreThreadCommand::GetMissing(sender)).await;
+        receiver.await.map_err(Shutdown)
+    }
+
+    async fn set_min_propose_round(&self, round: Round) -> Result<(), CoreError> {
+        let (sender, receiver) = oneshot::channel();
+        self.send(CoreThreadCommand::SetMinProposeRound(round, sender))
+            .await;
         receiver.await.map_err(Shutdown)
     }
 }
