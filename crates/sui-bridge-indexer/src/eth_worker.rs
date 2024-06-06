@@ -58,7 +58,7 @@ pub async fn process_finalized_eth_events(
                             }),
                         };
 
-                        write(&pool, vec![transfer]);
+                        let _ = write(pool, vec![transfer]);
                     }
                     EthSuiBridgeEvents::TokensClaimedFilter(_)
                     | EthSuiBridgeEvents::PausedFilter(_)
@@ -123,7 +123,7 @@ pub async fn process_unfinalized_eth_events(
                             }),
                         };
 
-                        write(&pool, vec![transfer]);
+                        let _ = write(pool, vec![transfer]);
                     }
                     EthSuiBridgeEvents::TokensClaimedFilter(bridge_event) => {
                         println!("Observed Unfinalized Eth Claim");
@@ -141,7 +141,7 @@ pub async fn process_unfinalized_eth_events(
                             data: None,
                         };
 
-                        write(&pool, vec![transfer]);
+                        let _ = write(pool, vec![transfer]);
                     }
                     EthSuiBridgeEvents::PausedFilter(_)
                     | EthSuiBridgeEvents::UnpausedFilter(_)
