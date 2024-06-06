@@ -5,17 +5,10 @@ use crate::postgres_manager::{get_connection_pool, write, PgPool};
 use crate::{BridgeDataSource, TokenTransfer, TokenTransferData, TokenTransferStatus};
 use anyhow::Result;
 use async_trait::async_trait;
-use ethers::providers::Provider;
-use ethers::providers::{Http, Middleware};
-use ethers::types::{Address as EthAddress, H256};
-use mysten_metrics::metered_channel::Receiver;
 use std::collections::BTreeSet;
-use std::sync::Arc;
-use sui_bridge::abi::{EthBridgeEvent, EthSuiBridgeEvents};
 use sui_bridge::events::{
     MoveTokenDepositedEvent, MoveTokenTransferApproved, MoveTokenTransferClaimed,
 };
-use sui_bridge::types::EthLog;
 use sui_data_ingestion_core::Worker;
 use sui_types::event::Event;
 use sui_types::{

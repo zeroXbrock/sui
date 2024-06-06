@@ -47,23 +47,27 @@ pub fn write(pool: &PgPool, token_txns: Vec<TokenTransfer>) -> Result<(), anyhow
     Ok(())
 }
 
-pub fn get_newest_finalized_token_transfer(pool: PgPool) -> Result<Option<DBTokenTransfer>, Error> {
+pub fn get_newest_finalized_token_transfer(
+    pool: &PgPool,
+) -> Result<Option<DBTokenTransfer>, Error> {
     use crate::schema::token_transfer::dsl::*;
 
     let connection = &mut pool.get().unwrap();
     token_transfer
-        .filter(status.eq("DepositedFinalized"))
+        .filter(status.ne("DepositedUnfinalized"))
         .order(block_height.desc())
         .first::<DBTokenTransfer>(connection)
         .optional()
 }
 
-pub fn get_newest_token_transfer(pool: &PgPool) -> Result<Option<DBTokenTransfer>, Error> {
+pub fn get_newest_unfinalized_token_transfer(
+    pool: &PgPool,
+) -> Result<Option<DBTokenTransfer>, Error> {
     use crate::schema::token_transfer::dsl::*;
 
     let connection = &mut pool.get().unwrap();
     token_transfer
-        .filter(status.ne("DepositedFinalized"))
+        .filter(status.eq("DepositedUnfinalized"))
         .order(block_height.desc())
         .first::<DBTokenTransfer>(connection)
         .optional()

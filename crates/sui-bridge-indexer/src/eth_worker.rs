@@ -45,6 +45,7 @@ pub async fn process_finalized_eth_events(
                             block_height: block_number,
                             timestamp_ms: timestamp,
                             txn_hash: tx_hash.as_bytes().to_vec(),
+                            txn_sender: bridge_event.sender_address.as_bytes().to_vec(),
                             status: TokenTransferStatus::Deposited,
                             gas_usage: gas.as_u64() as i64,
                             data_source: BridgeDataSource::Eth,
@@ -57,7 +58,7 @@ pub async fn process_finalized_eth_events(
                             }),
                         };
 
-                        write(&pool, transfer);
+                        write(&pool, vec![transfer]);
                     }
                     EthSuiBridgeEvents::TokensClaimedFilter(_)
                     | EthSuiBridgeEvents::PausedFilter(_)
@@ -109,6 +110,7 @@ pub async fn process_unfinalized_eth_events(
                             block_height: block_number,
                             timestamp_ms: timestamp,
                             txn_hash: tx_hash.as_bytes().to_vec(),
+                            txn_sender: bridge_event.sender_address.as_bytes().to_vec(),
                             status: TokenTransferStatus::DepositedUnfinalized,
                             gas_usage: gas.as_u64() as i64,
                             data_source: BridgeDataSource::Eth,
@@ -121,23 +123,25 @@ pub async fn process_unfinalized_eth_events(
                             }),
                         };
 
-                        // write(&pool, transfer);
+                        write(&pool, vec![transfer]);
                     }
                     EthSuiBridgeEvents::TokensClaimedFilter(bridge_event) => {
                         println!("Observed Unfinalized Eth Claim");
+
                         let transfer = TokenTransfer {
                             chain_id: bridge_event.source_chain_id,
                             nonce: bridge_event.nonce,
                             block_height: block_number,
                             timestamp_ms: timestamp,
                             txn_hash: tx_hash.as_bytes().to_vec(),
+                            txn_sender: bridge_event.sender_address.to_vec(),
                             status: TokenTransferStatus::Claimed,
                             gas_usage: gas.as_u64() as i64,
                             data_source: BridgeDataSource::Eth,
                             data: None,
                         };
 
-                        // write(&pool, transfer);
+                        write(&pool, vec![transfer]);
                     }
                     EthSuiBridgeEvents::PausedFilter(_)
                     | EthSuiBridgeEvents::UnpausedFilter(_)

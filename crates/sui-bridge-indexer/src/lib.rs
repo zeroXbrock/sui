@@ -65,10 +65,9 @@ impl TokenTransfer {
     }
 }
 
-// we want one Deposit for both eth and sui (eth deposit is finalized)
 pub(crate) enum TokenTransferStatus {
-    Deposited,
     DepositedUnfinalized,
+    Deposited,
     Approved,
     Claimed,
 }
@@ -76,10 +75,10 @@ pub(crate) enum TokenTransferStatus {
 impl Display for TokenTransferStatus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let str = match self {
+            TokenTransferStatus::DepositedUnfinalized => "DepositedUnfinalized",
             TokenTransferStatus::Deposited => "Deposited",
             TokenTransferStatus::Approved => "Approved",
             TokenTransferStatus::Claimed => "Claimed",
-            TokenTransferStatus::DepositedUnfinalized => "DepositedUnfinalized",
         };
         write!(f, "{str}")
     }

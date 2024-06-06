@@ -61,16 +61,14 @@ where
             ETH_EVENTS_CHANNEL_SIZE,
             &mysten_metrics::get_metrics()
                 .unwrap()
-                .channels
+                .channel_inflight
                 .with_label_values(&["eth_events_queue"]),
         );
         let latest_block = self.provider.get_block_number().await?.as_u64();
         let (latest_block_tx, latest_block_rx) = watch::channel(latest_block);
         let mut task_handles = vec![];
-        let eth_client_clone = self.eth_client.clone();
         task_handles.push(spawn_logged_monitored_task!(Self::run_block_refresh_task(
             latest_block_tx,
-            eth_client_clone,
             self.provider
         )));
         for (contract_address, start_block) in self.contract_addresses {
@@ -91,12 +89,11 @@ where
     }
 
     async fn run_block_refresh_task(
-        last_block_sender: watch::Sender<u64>,
-        eth_client: Arc<EthClient<P>>,
+        latest_block_sender: watch::Sender<u64>,
         provider: Arc<Provider<Http>>,
     ) {
         tracing::info!("Starting block refresh task.");
-        let mut last_block_number = 0;
+        let mut latest_block_number = 0;
         let mut interval = time::interval(BLOCK_QUERY_INTERVAL);
         interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
         loop {
@@ -112,12 +109,12 @@ where
 
             // TODO add a metrics for the last block
 
-            if new_value.as_u64() > last_block_number {
-                last_block_sender
+            if new_value.as_u64() > latest_block_number {
+                latest_block_sender
                     .send(new_value.as_u64())
                     .expect("last_block channel receiver is closed");
                 tracing::info!("Observed new eth block: {}", new_value);
-                last_block_number = new_value.as_u64();
+                latest_block_number = new_value.as_u64();
             }
         }
     }
@@ -125,7 +122,7 @@ where
     async fn run_event_listening_task(
         contract_address: EthAddress,
         mut start_block: u64,
-        mut last_block_receiver: watch::Receiver<u64>,
+        mut latest_block_receiver: watch::Receiver<u64>,
         events_sender: mysten_metrics::metered_channel::Sender<(EthAddress, u64, Vec<EthLog>)>,
         eth_client: Arc<EthClient<P>>,
     ) {
@@ -134,12 +131,12 @@ where
         loop {
             // If no more known blocks, wait for the next block.
             if !more_blocks {
-                last_block_receiver
+                latest_block_receiver
                     .changed()
                     .await
                     .expect("last_block channel sender is closed");
             }
-            let new_block = *last_block_receiver.borrow();
+            let new_block = *latest_block_receiver.borrow();
             if new_block < start_block {
                 tracing::info!(
                     contract_address=?contract_address,
