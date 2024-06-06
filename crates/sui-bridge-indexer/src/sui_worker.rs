@@ -27,12 +27,12 @@ use sui_types::{
 };
 use tracing::{debug, info};
 
-pub struct BridgeWorker {
+pub struct SuiBridgeWorker {
     bridge_object_ids: BTreeSet<ObjectID>,
     pg_pool: PgPool,
 }
 
-impl BridgeWorker {
+impl SuiBridgeWorker {
     pub fn new(bridge_object_ids: Vec<ObjectID>, db_url: String) -> Self {
         let mut bridge_object_ids = bridge_object_ids.into_iter().collect::<BTreeSet<_>>();
         bridge_object_ids.insert(SUI_BRIDGE_OBJECT_ID);
@@ -155,99 +155,8 @@ impl BridgeWorker {
     }
 }
 
-pub async fn process_eth_transaction(
-    mut eth_events_rx: Receiver<(EthAddress, u64, Vec<EthLog>)>,
-    provider: Arc<Provider<Http>>,
-    pool: PgPool,
-) {
-    while let Some((_, _, logs)) = eth_events_rx.recv().await {
-        let mut data = vec![];
-        for log in &logs {
-            let Some(bridge_event) = EthBridgeEvent::try_from_eth_log(log) else {
-                continue;
-            };
-            let block_number = log.block_number;
-            let block = provider.get_block(log.block_number).await.unwrap().unwrap();
-            let timestamp = block.timestamp.as_u64() * 1000;
-            let transaction = provider
-                .get_transaction(log.tx_hash)
-                .await
-                .unwrap()
-                .unwrap();
-            let gas = transaction.gas;
-            let tx_hash = log.tx_hash;
-            info!("Observed Eth bridge event: {:?}", bridge_event);
-            if let Some(token_transfer) =
-                process_eth_event(bridge_event, block_number, timestamp, tx_hash, gas.as_u64())
-            {
-                data.push(token_transfer)
-            }
-        }
-        write(&pool, data).unwrap();
-        // TODO: record last processed block
-        // TODO: handle error for the ETH data ingestion
-    }
-}
-
-fn process_eth_event(
-    bridge_event: EthBridgeEvent,
-    block_height: u64,
-    timestamp_ms: u64,
-    tx_hash: H256,
-    gas: u64,
-) -> Option<TokenTransfer> {
-    match bridge_event {
-        EthBridgeEvent::EthSuiBridgeEvents(bridge_event) => match bridge_event {
-            EthSuiBridgeEvents::TokensDepositedFilter(bridge_event) => {
-                info!("Observed Eth Deposit {:?}", bridge_event);
-                Some(TokenTransfer {
-                    chain_id: bridge_event.source_chain_id,
-                    nonce: bridge_event.nonce,
-                    block_height,
-                    timestamp_ms,
-                    txn_hash: tx_hash.as_bytes().to_vec(),
-                    txn_sender: bridge_event.sender_address.as_bytes().to_vec(),
-                    status: TokenTransferStatus::Deposited,
-                    gas_usage: gas as i64,
-                    data_source: BridgeDataSource::Eth,
-                    data: Some(TokenTransferData {
-                        destination_chain: bridge_event.destination_chain_id,
-                        sender_address: bridge_event.sender_address.as_bytes().to_vec(),
-                        recipient_address: bridge_event.recipient_address.to_vec(),
-                        token_id: bridge_event.token_id,
-                        amount: bridge_event.sui_adjusted_amount,
-                    }),
-                })
-            }
-            EthSuiBridgeEvents::TokensClaimedFilter(bridge_event) => {
-                info!("Observed Eth Claim {:?}", bridge_event);
-                Some(TokenTransfer {
-                    chain_id: bridge_event.source_chain_id,
-                    nonce: bridge_event.nonce,
-                    block_height,
-                    timestamp_ms,
-                    txn_hash: tx_hash.as_bytes().to_vec(),
-                    txn_sender: bridge_event.sender_address.to_vec(),
-                    status: TokenTransferStatus::Claimed,
-                    gas_usage: gas as i64,
-                    data_source: BridgeDataSource::Eth,
-                    data: None,
-                })
-            }
-            EthSuiBridgeEvents::PausedFilter(_)
-            | EthSuiBridgeEvents::UnpausedFilter(_)
-            | EthSuiBridgeEvents::UpgradedFilter(_)
-            | EthSuiBridgeEvents::InitializedFilter(_) => None,
-        },
-        EthBridgeEvent::EthBridgeCommitteeEvents(_)
-        | EthBridgeEvent::EthBridgeLimiterEvents(_)
-        | EthBridgeEvent::EthBridgeConfigEvents(_)
-        | EthBridgeEvent::EthCommitteeUpgradeableContractEvents(_) => None,
-    }
-}
-
 #[async_trait]
-impl Worker for BridgeWorker {
+impl Worker for SuiBridgeWorker {
     async fn process_checkpoint(&self, checkpoint: CheckpointData) -> Result<()> {
         info!(
             "Processing checkpoint [{}] {}: {}",

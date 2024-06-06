@@ -6,10 +6,12 @@ use crate::models::TokenTransferData as DBTokenTransferData;
 use std::fmt::{Display, Formatter};
 
 pub mod config;
+pub mod eth_worker;
+pub mod latest_eth_syncer;
 pub mod models;
 pub mod postgres_manager;
 pub mod schema;
-pub mod worker;
+pub mod sui_worker;
 
 pub struct TokenTransfer {
     chain_id: u8,
@@ -63,8 +65,10 @@ impl TokenTransfer {
     }
 }
 
+// we want one Deposit for both eth and sui (eth deposit is finalized)
 pub(crate) enum TokenTransferStatus {
     Deposited,
+    DepositedUnfinalized,
     Approved,
     Claimed,
 }
@@ -75,6 +79,7 @@ impl Display for TokenTransferStatus {
             TokenTransferStatus::Deposited => "Deposited",
             TokenTransferStatus::Approved => "Approved",
             TokenTransferStatus::Claimed => "Claimed",
+            TokenTransferStatus::DepositedUnfinalized => "DepositedUnfinalized",
         };
         write!(f, "{str}")
     }
