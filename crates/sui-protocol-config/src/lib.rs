@@ -13,7 +13,7 @@ use tracing::{info, warn};
 
 /// The minimum and maximum protocol versions supported by this build.
 const MIN_PROTOCOL_VERSION: u64 = 1;
-const MAX_PROTOCOL_VERSION: u64 = 49;
+const MAX_PROTOCOL_VERSION: u64 = 50;
 
 // Record history of protocol version allocations here:
 //
@@ -2333,6 +2333,7 @@ impl ProtocolConfig {
                 //
                 //     // Remove a constant (ensure that it is never accessed during this version).
                 //     max_move_object_size: None,
+                50 => {}
                 _ => panic!("unsupported version {:?}", version),
             }
         }
