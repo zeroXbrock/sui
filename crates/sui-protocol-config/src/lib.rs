@@ -2323,6 +2323,7 @@ impl ProtocolConfig {
                     // Run Move verification on framework upgrades in its own VM
                     cfg.feature_flags.fresh_vm_on_framework_upgrade = true;
                 }
+                50 => {}
                 // Use this template when making changes:
                 //
                 //     // modify an existing constant.
@@ -2333,7 +2334,6 @@ impl ProtocolConfig {
                 //
                 //     // Remove a constant (ensure that it is never accessed during this version).
                 //     max_move_object_size: None,
-                50 => {}
                 _ => panic!("unsupported version {:?}", version),
             }
         }
