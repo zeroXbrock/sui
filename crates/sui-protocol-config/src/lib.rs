@@ -13,7 +13,7 @@ use tracing::{info, warn};
 
 /// The minimum and maximum protocol versions supported by this build.
 const MIN_PROTOCOL_VERSION: u64 = 1;
-const MAX_PROTOCOL_VERSION: u64 = 50;
+const MAX_PROTOCOL_VERSION: u64 = 49;
 
 // Record history of protocol version allocations here:
 //
@@ -2323,7 +2323,6 @@ impl ProtocolConfig {
                     // Run Move verification on framework upgrades in its own VM
                     cfg.feature_flags.fresh_vm_on_framework_upgrade = true;
                 }
-                50 => {}
                 // Use this template when making changes:
                 //
                 //     // modify an existing constant.
